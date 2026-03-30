@@ -10,8 +10,8 @@ import { CompanyProfileScreen } from '../screens/company/CompanyProfileScreen';
 import { colors } from '../theme';
 
 export type CompanyJobsStackParamList = {
-  CompanyJobList: undefined;
-  CreateJob: undefined;
+  CompanyJobList: { initialFilter?: string } | undefined;
+  CreateJob: { jobId?: string } | undefined;
   Applicants: { jobId: string; jobTitle: string };
 };
 

@@ -92,7 +92,7 @@ export function WorkerSetupScreen() {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.title}>Worker Profile</Text>
+        <Text style={styles.title}>Employee Profile</Text>
         <Text style={styles.subtitle}>Tell us about yourself</Text>
 
         <View style={styles.form}>

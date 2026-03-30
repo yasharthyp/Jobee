@@ -75,7 +75,7 @@ export function RoleSelectionScreen() {
                 selectedRole === 'worker' && styles.selectedText,
               ]}
             >
-              I'm a Worker
+              I'm an Employee
             </Text>
             <Text style={styles.roleDescription}>
               Find jobs, get hired, and build your career
@@ -107,7 +107,7 @@ export function RoleSelectionScreen() {
               I'm a Company
             </Text>
             <Text style={styles.roleDescription}>
-              Post jobs, find workers, and grow your business
+              Post jobs, find employees, and grow your business
             </Text>
           </Card>
         </TouchableOpacity>

@@ -29,7 +29,7 @@ export function WorkerProfileScreen() {
         <View style={styles.avatar}>
           <Ionicons name="person" size={40} color={colors.white} />
         </View>
-        <Text style={styles.name}>{profile?.full_name ?? 'Worker'}</Text>
+        <Text style={styles.name}>{profile?.full_name ?? 'Employee'}</Text>
         <Text style={styles.email}>{profile?.email ?? ''}</Text>
         {worker?.availability && (
           <View style={styles.availabilityBadge}>

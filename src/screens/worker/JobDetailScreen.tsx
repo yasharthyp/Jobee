@@ -142,7 +142,7 @@ export function JobDetailScreen() {
           />
           <DetailRow
             icon="people-outline"
-            label="Workers Needed"
+            label="Employees Needed"
             value={String(job.workers_needed)}
           />
           {job.minimum_experience_years != null && job.minimum_experience_years > 0 && (

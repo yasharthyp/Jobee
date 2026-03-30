@@ -19,6 +19,7 @@ export function JobCard({ job, onPress }: JobCardProps) {
       : job.daily_wage_min
         ? `From ₹${job.daily_wage_min}/day`
         : null;
+        console.log("test")
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7}>

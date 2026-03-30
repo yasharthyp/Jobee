@@ -110,7 +110,7 @@ export function ApplicantsScreen() {
                 </View>
                 <View style={styles.nameBlock}>
                   <Text style={styles.name}>
-                    {profile?.full_name ?? 'Unknown Worker'}
+                    {profile?.full_name ?? 'Unknown Employee'}
                   </Text>
                   {profile?.city && (
                     <Text style={styles.city}>{profile.city}</Text>
@@ -189,7 +189,7 @@ export function ApplicantsScreen() {
           <EmptyState
             icon="people-outline"
             title="No applicants yet"
-            message="Applicants will appear here when workers apply"
+            message="Applicants will appear here when employees apply"
           />
         }
       />

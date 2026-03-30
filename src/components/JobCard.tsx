@@ -63,7 +63,7 @@ export function JobCard({ job, onPress }: JobCardProps) {
           <View style={styles.detailItem}>
             <Ionicons name="people-outline" size={14} color={colors.textSecondary} />
             <Text style={styles.detailText}>
-              {job.workers_needed} worker{job.workers_needed > 1 ? 's' : ''} needed
+              {job.workers_needed} employee{job.workers_needed > 1 ? 's' : ''} needed
             </Text>
           </View>
         </View>

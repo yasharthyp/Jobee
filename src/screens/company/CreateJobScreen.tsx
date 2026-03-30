@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,41 +9,107 @@ import {
   Alert,
   Switch,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { colors, fontSize, fontWeight, spacing } from '../../theme';
+import { CompanyJobsStackParamList } from '../../navigation/CompanyTabs';
+
+type RouteParams = RouteProp<CompanyJobsStackParamList, 'CreateJob'>;
+
+const INITIAL_FORM = {
+  title: '',
+  description: '',
+  city: '',
+  state: '',
+  workers_needed: '1',
+  daily_wage_min: '',
+  daily_wage_max: '',
+  start_date: '',
+  end_date: '',
+  minimum_experience_years: '0',
+  is_urgent: false,
+  accommodation_provided: false,
+  transport_provided: false,
+  meals_provided: false,
+};
 
 export function CreateJobScreen() {
   const navigation = useNavigation();
+  const route = useRoute<RouteParams>();
   const { company } = useAuth();
+
+  const jobId = route.params?.jobId;
+  const isEditMode = !!jobId;
+
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({
-    title: '',
-    description: '',
-    city: '',
-    state: '',
-    workers_needed: '1',
-    daily_wage_min: '',
-    daily_wage_max: '',
-    start_date: '',
-    end_date: '',
-    minimum_experience_years: '0',
-    is_urgent: false,
-    accommodation_provided: false,
-    transport_provided: false,
-    meals_provided: false,
-  });
+  const [fetching, setFetching] = useState(isEditMode);
+  const [currentStatus, setCurrentStatus] = useState<string>('draft');
+  const [form, setForm] = useState(INITIAL_FORM);
+
+  useEffect(() => {
+    if (!jobId) return;
+    (async () => {
+      const { data, error } = await supabase
+        .from('job_requests')
+        .select('*')
+        .eq('id', jobId)
+        .single();
+
+      if (error || !data) {
+        Alert.alert('Error', 'Could not load job details.');
+        navigation.goBack();
+        return;
+      }
+
+      setCurrentStatus(data.status);
+      setForm({
+        title: data.title ?? '',
+        description: data.description ?? '',
+        city: data.city ?? '',
+        state: data.state ?? '',
+        workers_needed: String(data.workers_needed ?? 1),
+        daily_wage_min: data.daily_wage_min != null ? String(data.daily_wage_min) : '',
+        daily_wage_max: data.daily_wage_max != null ? String(data.daily_wage_max) : '',
+        start_date: data.start_date ?? '',
+        end_date: data.end_date ?? '',
+        minimum_experience_years: String(data.minimum_experience_years ?? 0),
+        is_urgent: data.is_urgent,
+        accommodation_provided: data.accommodation_provided,
+        transport_provided: data.transport_provided,
+        meals_provided: data.meals_provided,
+      });
+      setFetching(false);
+    })();
+  }, [jobId, navigation]);
 
   const updateField = (key: string, value: any) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleCreate = async (publish: boolean) => {
+  const buildPayload = () => ({
+    title: form.title.trim(),
+    description: form.description.trim() || null,
+    city: form.city.trim() || null,
+    state: form.state.trim() || null,
+    workers_needed: parseInt(form.workers_needed, 10) || 1,
+    daily_wage_min: form.daily_wage_min ? parseFloat(form.daily_wage_min) : null,
+    daily_wage_max: form.daily_wage_max ? parseFloat(form.daily_wage_max) : null,
+    start_date: form.start_date || null,
+    end_date: form.end_date || null,
+    minimum_experience_years: parseInt(form.minimum_experience_years, 10) || 0,
+    is_urgent: form.is_urgent,
+    accommodation_provided: form.accommodation_provided,
+    transport_provided: form.transport_provided,
+    meals_provided: form.meals_provided,
+  });
+
+  const handleSave = async (publish: boolean) => {
     if (!company) return;
     if (!form.title.trim()) {
       Alert.alert('Validation', 'Job title is required.');
@@ -52,41 +118,57 @@ export function CreateJobScreen() {
 
     setLoading(true);
     try {
-      const now = new Date().toISOString();
-      const { error } = await supabase.from('job_requests').insert({
-        company_id: company.id,
-        title: form.title.trim(),
-        description: form.description.trim() || null,
-        city: form.city.trim() || null,
-        state: form.state.trim() || null,
-        workers_needed: parseInt(form.workers_needed, 10) || 1,
-        daily_wage_min: form.daily_wage_min ? parseFloat(form.daily_wage_min) : null,
-        daily_wage_max: form.daily_wage_max ? parseFloat(form.daily_wage_max) : null,
-        start_date: form.start_date || null,
-        end_date: form.end_date || null,
-        minimum_experience_years: parseInt(form.minimum_experience_years, 10) || 0,
-        is_urgent: form.is_urgent,
-        accommodation_provided: form.accommodation_provided,
-        transport_provided: form.transport_provided,
-        meals_provided: form.meals_provided,
-        status: publish ? 'open' : 'draft',
-        published_at: publish ? now : null,
-      });
+      const payload = buildPayload();
 
-      if (error) {
-        Alert.alert('Error', error.message);
-        return;
+      if (isEditMode) {
+        const updates: any = { ...payload };
+        if (publish && currentStatus === 'draft') {
+          updates.status = 'open';
+          updates.published_at = new Date().toISOString();
+        }
+        const { error } = await supabase
+          .from('job_requests')
+          .update(updates)
+          .eq('id', jobId);
+
+        if (error) {
+          Alert.alert('Error', error.message);
+          return;
+        }
+        Alert.alert('Success', 'Job updated successfully!', [
+          { text: 'OK', onPress: () => navigation.goBack() },
+        ]);
+      } else {
+        const now = new Date().toISOString();
+        const { error } = await supabase.from('job_requests').insert({
+          company_id: company.id,
+          ...payload,
+          status: publish ? 'open' : 'draft',
+          published_at: publish ? now : null,
+        });
+
+        if (error) {
+          Alert.alert('Error', error.message);
+          return;
+        }
+        Alert.alert('Success', publish ? 'Job published!' : 'Draft saved!', [
+          { text: 'OK', onPress: () => navigation.goBack() },
+        ]);
       }
-
-      Alert.alert('Success', publish ? 'Job published!' : 'Draft saved!', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
     } catch {
       Alert.alert('Error', 'Something went wrong.');
     } finally {
       setLoading(false);
     }
   };
+
+  if (fetching) {
+    return (
+      <View style={[styles.flex, styles.center]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -97,7 +179,9 @@ export function CreateJobScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.topBarTitle}>Create Job</Text>
+        <Text style={styles.topBarTitle}>
+          {isEditMode ? 'Edit Job' : 'Create Job'}
+        </Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -143,7 +227,7 @@ export function CreateJobScreen() {
         <View style={styles.row}>
           <View style={styles.halfInput}>
             <Input
-              label="Workers Needed"
+              label="Employees Needed"
               placeholder="1"
               value={form.workers_needed}
               onChangeText={(v) => updateField('workers_needed', v)}
@@ -224,19 +308,41 @@ export function CreateJobScreen() {
           />
         </View>
 
-        <Button
-          title="Publish Job"
-          onPress={() => handleCreate(true)}
-          loading={loading}
-          style={styles.button}
-        />
-        <Button
-          title="Save as Draft"
-          variant="outline"
-          onPress={() => handleCreate(false)}
-          disabled={loading}
-          style={styles.button}
-        />
+        {isEditMode ? (
+          <>
+            <Button
+              title="Save Changes"
+              onPress={() => handleSave(false)}
+              loading={loading}
+              style={styles.button}
+            />
+            {currentStatus === 'draft' && (
+              <Button
+                title="Publish Now"
+                variant="outline"
+                onPress={() => handleSave(true)}
+                disabled={loading}
+                style={styles.button}
+              />
+            )}
+          </>
+        ) : (
+          <>
+            <Button
+              title="Publish Job"
+              onPress={() => handleSave(true)}
+              loading={loading}
+              style={styles.button}
+            />
+            <Button
+              title="Save as Draft"
+              variant="outline"
+              onPress={() => handleSave(false)}
+              disabled={loading}
+              style={styles.button}
+            />
+          </>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -266,6 +372,7 @@ function SwitchRow({
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
+  center: { justifyContent: 'center', alignItems: 'center' },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
